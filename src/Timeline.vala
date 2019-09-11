@@ -10,6 +10,8 @@ public class Blaze.Timeline : Gtk.Box {
 
   private int ticks { get; set; }
 
+  private bool button_pressed { get; set; }
+
   public Timeline () {
     Object(
       orientation: Gtk.Orientation.VERTICAL
@@ -22,18 +24,27 @@ public class Blaze.Timeline : Gtk.Box {
     var event_box = new Gtk.EventBox ();
 
     event_box.set_events(
+      Gdk.EventMask.BUTTON_PRESS_MASK |
+      Gdk.EventMask.POINTER_MOTION_MASK |
       Gdk.EventMask.BUTTON_RELEASE_MASK
     );
 
+    event_box.button_press_event.connect((event) => {
+      button_pressed = true;
+
+      update_current_position (event.motion.x);
+    });
+
     event_box.button_release_event.connect((event) => {
-      int frame_hit = (int)(((int) event.motion.x) * ticks / width);
+      button_pressed = false;
+    });
 
-      frame_hit = (int) Math.fmax(frame_hit, start_frame);
-      frame_hit = (int) Math.fmin(frame_hit, end_frame);
+    event_box.motion_notify_event.connect((event) => {
+      if (button_pressed) {
+        //print("Pointer motion: (%d, %d)\n", (int)event.motion.x, (int)event.motion.y);
 
-      current = frame_hit;
-
-      queue_draw ();
+        update_current_position (event.motion.x);
+      }
     });
 
     event_box.hexpand = true;
@@ -50,6 +61,17 @@ public class Blaze.Timeline : Gtk.Box {
     end_frame = 60;
     current = 20;
     ticks = 80;
+  }
+
+  private void update_current_position (double x_pos) {
+      int frame_hit = (int)(((int) x_pos) * ticks / width);
+
+      frame_hit = (int) Math.fmax(frame_hit, start_frame);
+      frame_hit = (int) Math.fmin(frame_hit, end_frame);
+
+      current = frame_hit;
+
+      queue_draw ();
   }
 
   public override bool draw (Cairo.Context ctx) {
